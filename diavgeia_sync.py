@@ -35,7 +35,11 @@ import requests
 # ΡΥΘΜΙΣΕΙΣ
 # --------------------------------------------------------------------------
 
-OPENDATA_ROOT = "https://opendata.diavgeia.gov.gr/luminapi/opendata"
+# ΣΩΣΤΟ endpoint παραγωγής (επιβεβαιωμένο από την επίσημη βιβλιοθήκη diavgeia-api):
+#   https://diavgeia.gov.gr/opendata/search?org=<κωδικός>&...
+# Το φίλτρο φορέα είναι ΑΠΛΗ παράμετρος 'org' (δέχεται αριθμητικό uid Ή latin name),
+# ΟΧΙ q=organizationUid:... (το οποίο αγνοείται σιωπηλά -> επιστρέφει όλη τη χώρα).
+OPENDATA_ROOT = "https://diavgeia.gov.gr/opendata"
 SEARCH_URL = OPENDATA_ROOT + "/search"
 ORG_URL = OPENDATA_ROOT + "/organizations"
 
@@ -59,65 +63,55 @@ HEADERS = {
 # label          -> εμφανιζόμενο όνομα φορέα
 # candidates     -> λίστα υποψήφιων organizationUid προς δοκιμή (με σειρά προτίμησης)
 ORGANIZATIONS = [
-    {
-        "key": "pe_rethymnis",
-        "label": "Π.Ε. Ρεθύμνης (Περιφέρεια Κρήτης)",
-        "candidates": [
-            "99201018",        # ΕΠΙΒΕΒΑΙΩΜΕΝΟ uid (Περιφέρεια Κρήτης – Π.Ε. Ρεθύμνου)
-            "perethymnis",
-            "pe_rethymnis",
-            "perifereiakienotitarethymnis",
-        ],
-        # ΠΡΟΣΟΧΗ: αν το πρώτο bootstrap δείξει ότι αυτός ο κωδικός επιστρέφει
-        # πράξεις ΟΛΗΣ της Περιφέρειας Κρήτης (Ηράκλειο/Χανιά/Λασίθι), ξεσχολίασε
-        # την παρακάτω γραμμή για να κρατάς μόνο όσες αφορούν Ρέθυμνο:
-        # "unit_filter": ["ρεθύμν", "ρεθυμν"],
-    },
+    # --- Οι 5 δήμοι: καθαροί κωδικοί από το επίσημο μητρώο (φιλτράρουν τέλεια) ---
     {
         "key": "dimos_rethymnis",
         "label": "Δήμος Ρεθύμνης",
-        "candidates": [
-            "99222402",        # ΕΠΙΒΕΒΑΙΩΜΕΝΟ uid
-            "dimosrethymnis",
-            "dimosrethymnou",
-            "6263",
-        ],
-    },
-    {
-        "key": "dimos_amariou",
-        "label": "Δήμος Αμαρίου",
-        "candidates": [
-            "99222404",        # ΕΠΙΒΕΒΑΙΩΜΕΝΟ uid
-            "dimosamariou",
-            "dimos_amariou",
-        ],
+        "candidates": ["6263", "dhmos_rethymnou"],
     },
     {
         "key": "dimos_agiou_vasileiou",
         "label": "Δήμος Αγίου Βασιλείου",
-        "candidates": [
-            "99222403",        # ΕΠΙΒΕΒΑΙΩΜΕΝΟ uid
-            "dimosagiouvasileiou",
-            "dimoslampis",
-        ],
+        "candidates": ["6006", "agiosbasileios"],
+    },
+    {
+        "key": "dimos_amariou",
+        "label": "Δήμος Αμαρίου",
+        "candidates": ["6025", "dimos_amariou"],
     },
     {
         "key": "dimos_anogeion",
         "label": "Δήμος Ανωγείων",
-        "candidates": [
-            "99222406",        # ΕΠΙΒΕΒΑΙΩΜΕΝΟ uid
-            "dimos_anogeia",   # επίσης γνωστό latinName (παλαιό uid 6039)
-            "dimosanogeion",
-        ],
+        "candidates": ["6039", "dimos_anogeia"],
     },
     {
         "key": "dimos_mylopotamou",
         "label": "Δήμος Μυλοποτάμου",
-        "candidates": [
-            "99222405",        # ΕΠΙΒΕΒΑΙΩΜΕΝΟ uid
-            "dimosmylopotamou",  # επίσης γνωστό latinName
-            "dimos_mylopotamou",
+        "candidates": ["6201", "dimosmylopotamou"],
+    },
+    # --- Περιφέρεια & Αποκεντρωμένη: αναρτούν για ΟΛΗ την Κρήτη ---
+    # Κρατάμε ΜΟΝΟ πράξεις Ρεθύμνου: με ΑΚΡΙΒΕΣ φίλτρο βάσει των πραγματικών
+    # unitId των μονάδων Π.Ε. Ρεθύμνης + του signerId της Αντιπεριφερειάρχη
+    # (Μαρία Λιονή). Ως δίχτυ ασφαλείας υπάρχει και λεκτικό φίλτρο "ρεθύμν".
+    {
+        "key": "pe_rethymnis",
+        "label": "Π.Ε. Ρεθύμνης (Περιφέρεια Κρήτης)",
+        "candidates": ["5010", "periferia_kritis"],
+        # 15 μονάδες Π.Ε. Ρεθύμνης (Διοικητικό, Αγροτική, Ανάπτυξη, Υγεία,
+        # Μεταφορές, Τεχνικά, Τουρισμός, Πολιτική Προστασία, Περιβάλλον κ.λπ.)
+        "unit_ids": [
+            "81119", "81120", "81121", "81122", "81123", "81124",
+            "81819", "84062", "85314", "85315", "85660", "85877",
+            "100033665", "100053649", "100068383",
         ],
+        "signer_ids": ["111549"],   # Μαρία Λιονή, Αντιπεριφερειάρχης Ρεθύμνου
+        "unit_filter": ["ρεθύμν", "ρεθυμν", "rethymn"],
+    },
+    {
+        "key": "apok_dioikisi_kritis",
+        "label": "Αποκεντρωμένη Διοίκηση Κρήτης (Ρεθύμνου)",
+        "candidates": ["50204", "apdik_krhths"],
+        "unit_filter": ["ρεθύμν", "ρεθυμν", "rethymn"],
     },
 ]
 
@@ -232,19 +226,43 @@ def http_get_json(url, params):
 
 
 def search_page(org_uid, page, size, from_date=None, sort="recent"):
-    """Μία σελίδα αποτελεσμάτων search για συγκεκριμένο organizationUid."""
-    q = f'organizationUid:"{org_uid}"'
+    """Μία σελίδα αποτελεσμάτων search για συγκεκριμένο φορέα.
+
+    Χρησιμοποιεί το σωστό endpoint /opendata/search με την παράμετρο 'org'
+    (επιβεβαιωμένο από την επίσημη βιβλιοθήκη diavgeia-api). Το 'org' δέχεται
+    είτε αριθμητικό κωδικό είτε latin name.
+    """
     params = {
-        "q": q,
+        "org": str(org_uid),
         "page": page,
         "size": size,
         "sort": sort,
-        "wt": "json",
+        "status": "PUBLISHED",
     }
     if from_date:
-        # φίλτρο ημερομηνίας έκδοσης (issueDate) >= from_date
-        params["from_issue"] = from_date
-    return http_get_json(SEARCH_URL, params)
+        # Ημερομηνία έκδοσης - Από (format YYYY-MM-DD)
+        params["from_issue_date"] = from_date
+    data = http_get_json(SEARCH_URL, params)
+    if data is not None:
+        data["_requested_uid"] = str(org_uid)
+    return data
+
+
+def filter_was_applied(data, org_uid):
+    """
+    Ελεγχος ασφαλείας: επιβεβαιώνει ότι το φιλτράρισμα έγινε στον σωστό φορέα
+    και δεν γύρισε όλη η Διαύγεια. Κοιτάζει αν οι πράξεις ανήκουν στον φορέα.
+    Το org μπορεί να είναι latin name, οπότε ελέγχουμε και το πλήθος:
+    ένα ρεαλιστικό σύνολο (όχι εκατομμύρια) θεωρείται έγκυρο φίλτρο.
+    """
+    if not data:
+        return False
+    total = int(data.get("info", {}).get("total", 0) or 0)
+    # Δικλείδα: κανένας μεμονωμένος φορέας στη Ρεθύμνη δεν έχει > 1.000.000 πράξεις.
+    # Αν δούμε τέτοιο νούμερο, το φίλτρο σχεδόν σίγουρα αγνοήθηκε.
+    if total > 1_000_000:
+        return False
+    return True
 
 
 # --------------------------------------------------------------------------
@@ -278,6 +296,11 @@ def find_working_query(org, conn):
         data = search_page(cand, page=0, size=1)
         if data is None:
             print(f"    - '{cand}': άκυρο/δεν απαντά")
+            continue
+        # ΕΛΕΓΧΟΣ ΑΣΦΑΛΕΙΑΣ: αν το API αγνόησε το φίλτρο (επιστρέφει όλη τη
+        # Διαύγεια), ΑΠΟΡΡΙΨΕ τον κωδικό — αλλιώς θα κατεβάζαμε εκατομμύρια.
+        if not filter_was_applied(data, cand):
+            print(f"    ✗ '{cand}': το φίλτρο ΔΕΝ εφαρμόστηκε (αγνοήθηκε) — απόρριψη")
             continue
         total = int(data.get("info", {}).get("total", 0) or 0)
         if total > 0:
@@ -544,6 +567,10 @@ def parse_decision(decision, org):
     else:
         unit = str(units)
 
+    # Raw IDs μονάδων/υπογραφόντων (για ακριβές φιλτράρισμα Π.Ε. Ρεθύμνου).
+    raw_unit_ids = [str(x) for x in (decision.get("unitIds") or [])]
+    raw_signer_ids = [str(x) for x in (decision.get("signerIds") or [])]
+
     amount, currency = extract_amount(decision)
 
     # Κατηγοριοποίηση ροής δαπάνης -> count_in_total μόνο για ΧΕΠ.
@@ -573,6 +600,9 @@ def parse_decision(decision, org):
         "count_in_total": count_in_total,
         "raw_json": json.dumps(decision, ensure_ascii=False),
         "fetched_at": datetime.now(timezone.utc).isoformat(),
+        # Βοηθητικά (δεν αποθηκεύονται στη βάση· μόνο για το φίλτρο Ρεθύμνου)
+        "_unit_ids": raw_unit_ids,
+        "_signer_ids": raw_signer_ids,
     }
 
 
@@ -646,15 +676,30 @@ def sync_org(conn, org, full=False, since=None):
             parsed = parse_decision(d, org)
             if not parsed:
                 continue
-            # Προαιρετικό φίλτρο: αν ο φορέας ορίζει unit_filter (λίστα λέξεων),
-            # κράτα μόνο πράξεις που αναφέρουν Ρέθυμνο στη μονάδα/θέμα. Χρήσιμο
-            # αν ο κωδικός Περιφέρειας επιστρέφει ΟΛΗ την Κρήτη αντί μόνο Π.Ε. Ρεθύμνου.
+            # ΑΚΡΙΒΕΣ φίλτρο Π.Ε. Ρεθύμνου (για Περιφέρεια/Αποκεντρωμένη που
+            # αναρτούν για όλη την Κρήτη). Κρατάμε την πράξη αν ισχύει ΕΝΑ από:
+            #   (α) ανήκει σε μονάδα (unitId) της Π.Ε. Ρεθύμνης
+            #   (β) υπογράφεται από signerId Ρεθύμνου (π.χ. Αντιπεριφερειάρχης)
+            #   (γ) δίχτυ ασφαλείας: αναφέρει "Ρεθύμν" σε μονάδα/θέμα
+            want_units = set(org.get("unit_ids") or [])
+            want_signers = set(org.get("signer_ids") or [])
             uf = org.get("unit_filter")
-            if uf:
-                hay = ((parsed.get("unit") or "") + " " +
-                       (parsed.get("subject") or "")).lower()
-                if not any(k.lower() in hay for k in uf):
+            if want_units or want_signers or uf:
+                keep = False
+                if want_units and (want_units & set(parsed.get("_unit_ids", []))):
+                    keep = True
+                if want_signers and (want_signers & set(parsed.get("_signer_ids", []))):
+                    keep = True
+                if not keep and uf:
+                    hay = ((parsed.get("unit") or "") + " " +
+                           (parsed.get("subject") or "")).lower()
+                    if any(k.lower() in hay for k in uf):
+                        keep = True
+                if not keep:
                     continue
+            # καθάρισε τα βοηθητικά πεδία πριν την αποθήκευση
+            parsed.pop("_unit_ids", None)
+            parsed.pop("_signer_ids", None)
             rows.append(parsed)
             if parsed["issue_date"]:
                 if max_issue is None or parsed["issue_date"] > max_issue:

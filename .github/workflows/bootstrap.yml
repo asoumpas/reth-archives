@@ -1,0 +1,55 @@
+name: Bootstrap (πλήρες πρώτο κατέβασμα)
+
+on:
+  workflow_dispatch:
+    inputs:
+      org:
+        description: "Μόνο ένας φορέας (key) — άφησέ το κενό για όλους"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: diavgeia-sync
+  cancel-in-progress: false
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Full sync
+        run: |
+          if [ -n "${{ github.event.inputs.org }}" ]; then
+            python diavgeia_sync.py --full --org "${{ github.event.inputs.org }}"
+          else
+            python diavgeia_sync.py --full
+          fi
+
+      - name: Build data.json
+        run: python build_json.py
+
+      - name: Commit results
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f diavgeia.db docs/data.json
+          if git diff --staged --quiet; then
+            echo "Καμία αλλαγή."
+          else
+            git commit -m "bootstrap: πλήρες κατέβασμα [skip ci]"
+            git push
+          fi

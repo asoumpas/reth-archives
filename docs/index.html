@@ -126,6 +126,22 @@
   .disclaimer{background:rgba(192,138,45,.09);border:1px solid rgba(192,138,45,.3);
     border-radius:8px;padding:11px 14px;font-size:.82rem;color:#7a5a1a;margin-top:14px}
 
+  .explainer{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    margin-bottom:20px;overflow:hidden}
+  .explainer>summary{cursor:pointer;padding:14px 18px;font-family:'Bitter',serif;
+    font-weight:600;color:var(--sea);font-size:1rem;list-style:none;user-select:none}
+  .explainer>summary::-webkit-details-marker{display:none}
+  .explainer>summary:hover{background:rgba(13,92,99,.04)}
+  .explainer[open]>summary{border-bottom:1px solid var(--line)}
+  .explainer-body{padding:8px 22px 20px;font-size:.92rem;line-height:1.62;color:var(--ink)}
+  .explainer-body h3{font-family:'Bitter',serif;color:var(--sea);font-size:1.02rem;
+    margin:18px 0 6px}
+  .explainer-body ul{margin:6px 0 6px 4px;padding-left:18px}
+  .explainer-body li{margin:4px 0}
+  .explainer-body p{margin:6px 0}
+  .explainer-foot{margin-top:16px!important;padding-top:12px;border-top:1px solid var(--line);
+    font-size:.84rem;color:var(--muted)}
+
   .total-box{background:linear-gradient(135deg,rgba(13,92,99,.07),rgba(192,138,45,.07));
     border:1px solid var(--line);border-left:4px solid var(--gold);
     border-radius:var(--radius);padding:13px 16px;margin-bottom:16px}
@@ -156,6 +172,69 @@
 </header>
 
 <main class="wrap">
+  <details class="explainer">
+    <summary>📖 Τι είναι όλα αυτά; — Σύντομος οδηγός (πατήστε για άνοιγμα)</summary>
+    <div class="explainer-body">
+      <h3>Τι είναι η Διαύγεια;</h3>
+      <p>Η <b>Διαύγεια</b> (diavgeia.gov.gr) είναι το επίσημο πρόγραμμα διαφάνειας του
+      ελληνικού κράτους. Από το 2010, σχεδόν κάθε απόφαση δημόσιου φορέα (δήμου,
+      περιφέρειας, υπουργείου κ.λπ.) <b>πρέπει</b> να αναρτάται εκεί για να ισχύει.
+      Κάθε ανάρτηση παίρνει έναν μοναδικό κωδικό, τον <b>ΑΔΑ</b> (Αριθμός Διαδικτυακής
+      Ανάρτησης) — κάτι σαν «αριθμός ταυτότητας» της κάθε απόφασης. Αν μια απόφαση δεν
+      είναι στη Διαύγεια, τυπικά δεν είναι σε ισχύ.</p>
+
+      <h3>Τι κάνει αυτή η σελίδα;</h3>
+      <p>Συγκεντρώνει σε <b>ένα σημείο</b> τις πράξεις που αφορούν την Περιφερειακή
+      Ενότητα Ρεθύμνης: τους πέντε δήμους (Ρεθύμνης, Αγίου Βασιλείου, Αμαρίου, Ανωγείων,
+      Μυλοποτάμου) <b>μαζί με τους φορείς τους</b> (ΔΕΥΑ, κοινωφελείς επιχειρήσεις,
+      σχολικές επιτροπές, παιδικοί σταθμοί κ.λπ.), καθώς και τις πράξεις της Περιφέρειας
+      Κρήτης και της Αποκεντρωμένης Διοίκησης που αφορούν το Ρέθυμνο. Έτσι μπορείτε να
+      ψάξετε τα πάντα μαζί, αντί να μπαίνετε φορέα-φορέα στη Διαύγεια.</p>
+
+      <h3>Τι είναι οι «φορείς»;</h3>
+      <p>Φορέας είναι η δημόσια υπηρεσία που εκδίδει την απόφαση. Ένας δήμος δεν είναι
+      ένας μόνο φορέας: εκτός από τον <b>κύριο δήμο</b>, έχει και ξεχωριστούς φορείς που
+      αναρτούν μόνοι τους — π.χ. η <b>ΔΕΥΑ</b> (ύδρευση-αποχέτευση), η <b>Κοινωφελής
+      Επιχείρηση</b>, οι <b>Σχολικές Επιτροπές</b>, το <b>ΚΑΠΗ</b>, οι παιδικοί σταθμοί.
+      Σε αυτή τη σελίδα τους βλέπετε <b>ομαδοποιημένους κάτω από τον δήμο τους</b>.</p>
+
+      <h3>Τι είναι οι «πράξεις» / αποφάσεις;</h3>
+      <p>«Πράξη» είναι κάθε επίσημη απόφαση ή ενέργεια του φορέα: μια πρόσληψη, μια
+      πληρωμή, μια ανάθεση έργου, μια άδεια, ένας κανονισμός. Κάθε πράξη έχει ένα
+      <b>θέμα</b> (τι αφορά), έναν <b>τύπο</b>, μια <b>ημερομηνία</b>, τον <b>υπογράφοντα</b>
+      και ένα <b>έγγραφο PDF</b> που μπορείτε να ανοίξετε.</p>
+
+      <h3>Τι είναι οι «τύποι» / κατηγορίες;</h3>
+      <p>Κάθε πράξη ανήκει σε έναν <b>τύπο</b>. Οι πιο συνηθισμένοι σχετίζονται με δαπάνες
+      και ακολουθούν συγκεκριμένη σειρά:</p>
+      <ul>
+        <li><b>Ανάληψη υποχρέωσης:</b> ο φορέας «δεσμεύει» χρήματα για μια μελλοντική
+        δαπάνη (σαν να βάζει στην άκρη το ποσό).</li>
+        <li><b>Σύμβαση / Ανάθεση:</b> ο φορέας αναθέτει το έργο ή την προμήθεια σε
+        ανάδοχο.</li>
+        <li><b>Χρηματικό Ένταλμα Πληρωμής (ΧΕΠ):</b> η <b>πραγματική πληρωμή</b> — εδώ
+        φεύγουν όντως τα χρήματα.</li>
+      </ul>
+      <p>Υπάρχουν και πολλοί άλλοι τύποι (κανονιστικές πράξεις, διορισμοί, οργανωτικά
+      θέματα κ.λπ.) που δεν αφορούν δαπάνες.</p>
+
+      <h3>Γιατί προσέχουμε τα ποσά;</h3>
+      <p>Η ίδια δαπάνη περνά από <b>τρεις φάσεις</b> (ανάληψη → σύμβαση → πληρωμή). Αν
+      προσθέταμε και τις τρεις, θα μετρούσαμε το ίδιο ποσό τρεις φορές. Γι' αυτό, όταν
+      μελλοντικά υπολογιστεί «σύνολο ευρώ», θα μετρά <b>μόνο τις πραγματικές πληρωμές
+      (ΧΕΠ)</b> — ώστε ένα έξοδο 1.000 € να μετρηθεί <b>μία φορά</b>, όχι τρεις.</p>
+
+      <h3>Πώς ψάχνω;</h3>
+      <p>Γράψτε λέξεις στο πλαίσιο αναζήτησης (π.χ. <i>«ασφαλτόστρωση»</i>, ένα όνομα, ή
+      έναν ΑΔΑ). Περιορίστε με τα φίλτρα <b>Φορέας</b>, <b>Τύπος</b> και <b>Έτος</b>. Κάθε
+      αποτέλεσμα έχει σύνδεσμο που ανοίγει το <b>πρωτότυπο έγγραφο</b> στη Διαύγεια.</p>
+
+      <p class="explainer-foot">Πηγή όλων των δεδομένων: το επίσημο
+      <b>opendata.diavgeia.gov.gr</b>. Η σελίδα απλώς τα συγκεντρώνει και τα κάνει
+      εύκολα αναζητήσιμα· δεν τα τροποποιεί.</p>
+    </div>
+  </details>
+
   <div class="controls">
     <div class="search-row">
       <div class="search-box">
@@ -260,12 +339,35 @@ function initUI(){
     `<div class="stat"><b>${m.organizations||DATA.organizations.length}</b><span>Φορείς</span></div>`+
     `<div class="stat"><b>${DATA.years.length}</b><span>Έτη</span></div>`;
 
-  // φορείς
+  // φορείς — ομαδοποιημένοι ανά δήμο (optgroup)
   const orgSel = $('f-org');
+  const byGroup = {};
   DATA.organizations.forEach(o=>{
-    const opt=document.createElement('option');
-    opt.value=o.key; opt.textContent=`${o.label} (${o.count.toLocaleString('el-GR')})`;
-    orgSel.appendChild(opt);
+    const g = o.group || o.label;
+    (byGroup[g] = byGroup[g] || []).push(o);
+  });
+  // σειρά ομάδων: όπως έρχονται στο groups (κατά πλήθος), αλλιώς αλφαβητικά
+  const groupOrder = (DATA.groups && DATA.groups.length)
+    ? DATA.groups.map(g=>g.label)
+    : Object.keys(byGroup).sort((a,b)=>a.localeCompare(b,'el'));
+  groupOrder.forEach(g=>{
+    const members = byGroup[g]; if(!members) return;
+    const total = members.reduce((s,o)=>s+(o.count||0),0);
+    const og = document.createElement('optgroup');
+    og.label = `${g} — σύνολο (${total.toLocaleString('el-GR')})`;
+    // επιλογή "όλος ο δήμος + φορείς του"
+    const allOpt = document.createElement('option');
+    allOpt.value = 'group:'+g;
+    allOpt.textContent = `▸ Όλος ο δήμος & φορείς του (${total.toLocaleString('el-GR')})`;
+    og.appendChild(allOpt);
+    // μεμονωμένοι φορείς
+    members.sort((a,b)=>(b.count||0)-(a.count||0)).forEach(o=>{
+      const opt=document.createElement('option');
+      opt.value=o.key;
+      opt.textContent=`   ${o.label} (${(o.count||0).toLocaleString('el-GR')})`;
+      og.appendChild(opt);
+    });
+    orgSel.appendChild(og);
   });
   // τύποι
   const tSel=$('f-type');
@@ -302,7 +404,11 @@ function apply(){
   const terms = q ? q.split(/\s+/) : [];
 
   filtered = DATA.decisions.filter(d=>{
-    if(org && d.org!==org) return false;
+    if(org){
+      if(org.startsWith('group:')){
+        if((d.group||'') !== org.slice(6)) return false;
+      } else if(d.org!==org) return false;
+    }
     if(type && (d.typeLabel||d.type)!==type) return false;
     if(year && String(d.year)!==year) return false;
     if(terms.length){

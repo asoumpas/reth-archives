@@ -296,12 +296,15 @@ def http_get_json(url, params):
     return None
 
 
-def search_page(org_uid, page, size, from_date=None, sort="recent"):
-    """Μία σελίδα αποτελεσμάτων search για συγκεκριμένο φορέα.
+def search_page(org_uid, page, size, from_date=None, to_date=None, sort="recent"):
+    """Μία σελίδα αποτελεσμάτων search για συγκεκριμένο φορέα, σε χρονικό παράθυρο.
 
-    Χρησιμοποιεί το σωστό endpoint /opendata/search με την παράμετρο 'org'
-    (επιβεβαιωμένο από την επίσημη βιβλιοθήκη diavgeia-api). Το 'org' δέχεται
-    είτε αριθμητικό κωδικό είτε latin name.
+    Endpoint /opendata/search με παράμετρο 'org' (αριθμητικό uid ή latin name).
+
+    ΣΗΜΑΝΤΙΚΟ — όριο 6 μηνών: το API εφαρμόζει ΠΑΝΤΑ παράθυρο ~6 μηνών στο
+    issueDate. Ό,τι from_issue_date δώσεις, βάζει to = from + 6 μήνες. Γι' αυτό
+    ο συγχρονισμός γίνεται ΑΝΑ ΕΞΑΜΗΝΟ (βλ. sync_org): δίνουμε ρητό from & to
+    εντός 6μήνου, ώστε το API να το σέβεται και να μη χάνεται τίποτα.
     """
     params = {
         "org": str(org_uid),
@@ -310,16 +313,10 @@ def search_page(org_uid, page, size, from_date=None, sort="recent"):
         "sort": sort,
         "status": "PUBLISHED",
     }
-    # ΚΡΙΣΙΜΟ: αν ΔΕΝ δώσουμε ρητό εύρος ημερομηνιών, το API βάζει αυτόματα
-    # φίλτρο "τελευταίο εξάμηνο" και χάνουμε όλο το ιστορικό! Δίνουμε λοιπόν
-    # ρητό from_issue_date από το 2010 (έναρξη Διαύγειας) έως αύριο.
     if from_date:
         params["from_issue_date"] = from_date
-    else:
-        params["from_issue_date"] = "2010-10-01"
-    # to_issue_date = αύριο (για να πιάνει και τις σημερινές)
-    tomorrow = (datetime.now(timezone.utc) + timedelta(days=1)).strftime("%Y-%m-%d")
-    params["to_issue_date"] = tomorrow
+    if to_date:
+        params["to_issue_date"] = to_date
     data = http_get_json(SEARCH_URL, params)
     if data is not None:
         data["_requested_uid"] = str(org_uid)
@@ -707,6 +704,30 @@ def upsert_decisions(conn, rows):
 # ΣΥΓΧΡΟΝΙΣΜΟΣ ΕΝΟΣ ΦΟΡΕΑ
 # --------------------------------------------------------------------------
 
+def date_windows(start_date, end_date, months=6):
+    """Παράγει διαδοχικά χρονικά παράθυρα [from, to] των `months` μηνών,
+    από start_date έως end_date (strings 'YYYY-MM-DD'). Χρειάζεται γιατί το
+    API της Διαύγειας περιορίζει κάθε αναζήτηση σε ~6 μήνες."""
+    from datetime import date
+    y, m, d = map(int, start_date.split("-"))
+    cur = date(y, m, d)
+    ey, em, ed = map(int, end_date.split("-"))
+    end = date(ey, em, ed)
+    while cur <= end:
+        # υπολόγισε το τέλος του παραθύρου (+months μήνες, -1 ημέρα)
+        nm = cur.month - 1 + months
+        ny = cur.year + nm // 12
+        nm = nm % 12 + 1
+        # πρώτη του επόμενου παραθύρου
+        from datetime import timedelta as _td
+        nxt = date(ny, nm, 1)
+        win_end = nxt - _td(days=1)
+        if win_end > end:
+            win_end = end
+        yield (cur.isoformat(), win_end.isoformat())
+        cur = nxt
+
+
 def sync_org(conn, org, full=False, since=None):
     print(f"\n=== {org['label']} ===")
     uid = find_working_query(org, conn)
@@ -729,37 +750,28 @@ def sync_org(conn, org, full=False, since=None):
     if full:
         print("  ΠΛΗΡΕΣ κατέβασμα (όλο το ιστορικό)...")
 
-    page = 0
     total_new = 0
-    total_seen = 0
     max_issue = None
-    api_total = None
 
-    while True:
-        time.sleep(SLEEP_BETWEEN)
-        data = search_page(uid, page=page, size=PAGE_SIZE, from_date=from_date)
-        if data is None:
-            print(f"  Σφάλμα στη σελίδα {page}, διακοπή φορέα.")
-            break
+    # Ορισμός των χρονικών παραθύρων προς κατέβασμα.
+    today = datetime.now(timezone.utc).date().isoformat()
+    if full:
+        start = "2010-10-01"   # έναρξη Διαύγειας
+    else:
+        start = from_date or "2010-10-01"
+    windows = list(date_windows(start, today, months=5))
 
-        if api_total is None:
-            api_total = int(data.get("info", {}).get("total", 0) or 0)
-            print(f"  Σύνολο διαθέσιμων (με φίλτρο): {api_total}")
-
-        decisions = data.get("decisions") or data.get("items") or []
-        if not decisions:
-            break
-
+    # Βοηθητική: επεξεργασία & αποθήκευση μιας λίστας decisions.
+    def process(decisions):
+        nonlocal total_new, max_issue
         rows = []
         for d in decisions:
             parsed = parse_decision(d, org)
             if not parsed:
                 continue
-            # ΑΚΡΙΒΕΣ φίλτρο Π.Ε. Ρεθύμνου (για Περιφέρεια/Αποκεντρωμένη που
-            # αναρτούν για όλη την Κρήτη). Κρατάμε την πράξη αν ισχύει ΕΝΑ από:
-            #   (α) ανήκει σε μονάδα (unitId) της Π.Ε. Ρεθύμνης
-            #   (β) υπογράφεται από signerId Ρεθύμνου (π.χ. Αντιπεριφερειάρχης)
-            #   (γ) δίχτυ ασφαλείας: αναφέρει "Ρεθύμν" σε μονάδα/θέμα
+            # ΑΚΡΙΒΕΣ φίλτρο Π.Ε. Ρεθύμνου (Περιφέρεια/Αποκεντρωμένη -> όλη Κρήτη):
+            #   (α) μονάδα (unitId) Π.Ε. Ρεθύμνης  (β) signerId Ρεθύμνου
+            #   (γ) δίχτυ: αναφέρει "Ρεθύμν" σε μονάδα/θέμα
             want_units = set(org.get("unit_ids") or [])
             want_signers = set(org.get("signer_ids") or [])
             uf = org.get("unit_filter")
@@ -776,28 +788,47 @@ def sync_org(conn, org, full=False, since=None):
                         keep = True
                 if not keep:
                     continue
-            # καθάρισε τα βοηθητικά πεδία πριν την αποθήκευση
             parsed.pop("_unit_ids", None)
             parsed.pop("_signer_ids", None)
             rows.append(parsed)
             if parsed["issue_date"]:
                 if max_issue is None or parsed["issue_date"] > max_issue:
                     max_issue = parsed["issue_date"]
-
         added = upsert_decisions(conn, rows)
         total_new += added
-        total_seen += len(rows)
-        print(f"  σελίδα {page}: {len(rows)} πράξεις, +{added} νέες "
-              f"(σύνολο νέων: {total_new})")
+        return len(rows), added
 
-        # τέλος σελιδοποίησης
-        if len(decisions) < PAGE_SIZE:
-            break
-        if api_total and total_seen >= api_total:
-            break
-        page += 1
+    grand_seen = 0
+    for (w_from, w_to) in windows:
+        page = 0
+        win_total = None
+        win_seen = 0
+        while True:
+            time.sleep(SLEEP_BETWEEN)
+            data = search_page(uid, page=page, size=PAGE_SIZE,
+                               from_date=w_from, to_date=w_to)
+            if data is None:
+                print(f"  Σφάλμα στο παράθυρο {w_from}..{w_to} σελ.{page}, συνεχίζω.")
+                break
+            if win_total is None:
+                win_total = int(data.get("info", {}).get("total", 0) or 0)
+            decisions = data.get("decisions") or data.get("items") or []
+            if not decisions:
+                break
+            seen, added = process(decisions)
+            win_seen += len(decisions)
+            grand_seen += seen
+            if len(decisions) < PAGE_SIZE:
+                break
+            if win_total and win_seen >= win_total:
+                break
+            page += 1
+        if win_total:
+            print(f"  {w_from[:7]}…{w_to[:7]}: {win_total} πράξεις "
+                  f"(σύνολο νέων ως τώρα: {total_new})")
 
     # ενημέρωση μεταδεδομένων συγχρονισμού
+    cur = conn.cursor()
     if max_issue:
         cur.execute(
             "INSERT OR REPLACE INTO sync_meta (org_key, last_issue, last_sync_at) "
@@ -812,7 +843,8 @@ def sync_org(conn, org, full=False, since=None):
         )
     conn.commit()
 
-    print(f"  ΟΛΟΚΛΗΡΩΘΗΚΕ: {total_new} νέες πράξεις για {org['label']}")
+    print(f"  ΟΛΟΚΛΗΡΩΘΗΚΕ: {total_new} νέες πράξεις για {org['label']} "
+          f"(εξετάστηκαν {grand_seen})")
     return {"org": org["label"], "new": total_new, "ok": True}
 
 

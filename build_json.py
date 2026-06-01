@@ -31,7 +31,7 @@ def main():
     cur = conn.cursor()
 
     rows = cur.execute("""
-        SELECT ada, org_key, org_label, subject, decision_type,
+        SELECT ada, org_key, org_label, org_group, subject, decision_type,
                decision_type_label, issue_date, protocol, signer, unit,
                amount, amount_currency, year, doc_url,
                doc_category, count_in_total, amount_confidence
@@ -41,6 +41,7 @@ def main():
 
     decisions = []
     org_counts = {}
+    group_counts = {}
     type_set = {}
     year_set = set()
 
@@ -58,6 +59,7 @@ def main():
             "ada": d["ada"],
             "org": d["org_key"],
             "orgLabel": d["org_label"],
+            "group": d["org_group"] or d["org_label"],
             "subject": d["subject"],
             "type": d["decision_type"],
             "typeLabel": d["decision_type_label"],
@@ -88,6 +90,9 @@ def main():
 
         org_counts[d["org_key"]] = org_counts.get(d["org_key"], 0)
         org_counts[d["org_key"]] += 1
+        grp = d["org_group"] or d["org_label"]
+        if grp:
+            group_counts[grp] = group_counts.get(grp, 0) + 1
         if d["org_label"]:
             type_label = d["decision_type_label"] or d["decision_type"] or ""
             if type_label:
@@ -97,12 +102,21 @@ def main():
 
     # λίστα φορέων με ετικέτες & πλήθη
     org_labels = {}
-    for r in cur.execute("SELECT DISTINCT org_key, org_label FROM decisions"):
+    org_groups = {}
+    for r in cur.execute("SELECT DISTINCT org_key, org_label, org_group FROM decisions"):
         org_labels[r["org_key"]] = r["org_label"]
+        org_groups[r["org_key"]] = r["org_group"] or r["org_label"]
 
     organizations = [
-        {"key": k, "label": org_labels.get(k, k), "count": org_counts.get(k, 0)}
+        {"key": k, "label": org_labels.get(k, k),
+         "group": org_groups.get(k, ""), "count": org_counts.get(k, 0)}
         for k in sorted(org_counts, key=lambda x: org_labels.get(x, x))
+    ]
+
+    # ομάδες (δήμοι + Περιφέρεια) με συνολικά πλήθη
+    groups = [
+        {"label": g, "count": c}
+        for g, c in sorted(group_counts.items(), key=lambda kv: -kv[1])
     ]
 
     decision_types = [
@@ -137,6 +151,7 @@ def main():
     payload = {
         "meta": meta,
         "organizations": organizations,
+        "groups": groups,
         "decision_types": decision_types,
         "years": years,
         "amount_summary": amount_summary,

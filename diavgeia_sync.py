@@ -27,7 +27,7 @@ import json
 import sqlite3
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 import requests
 
@@ -63,42 +63,110 @@ HEADERS = {
 # label          -> εμφανιζόμενο όνομα φορέα
 # candidates     -> λίστα υποψήφιων organizationUid προς δοκιμή (με σειρά προτίμησης)
 ORGANIZATIONS = [
-    # --- Οι 5 δήμοι: καθαροί κωδικοί από το επίσημο μητρώο (φιλτράρουν τέλεια) ---
-    {
-        "key": "dimos_rethymnis",
-        "label": "Δήμος Ρεθύμνης",
-        "candidates": ["6263", "dhmos_rethymnou"],
-    },
-    {
-        "key": "dimos_agiou_vasileiou",
-        "label": "Δήμος Αγίου Βασιλείου",
-        "candidates": ["6006", "agiosbasileios"],
-    },
-    {
-        "key": "dimos_amariou",
-        "label": "Δήμος Αμαρίου",
-        "candidates": ["6025", "dimos_amariou"],
-    },
-    {
-        "key": "dimos_anogeion",
-        "label": "Δήμος Ανωγείων",
-        "candidates": ["6039", "dimos_anogeia"],
-    },
-    {
-        "key": "dimos_mylopotamou",
-        "label": "Δήμος Μυλοποτάμου",
-        "candidates": ["6201", "dimosmylopotamou"],
-    },
-    # --- Περιφέρεια & Αποκεντρωμένη: αναρτούν για ΟΛΗ την Κρήτη ---
-    # Κρατάμε ΜΟΝΟ πράξεις Ρεθύμνου: με ΑΚΡΙΒΕΣ φίλτρο βάσει των πραγματικών
-    # unitId των μονάδων Π.Ε. Ρεθύμνης + του signerId της Αντιπεριφερειάρχη
-    # (Μαρία Λιονή). Ως δίχτυ ασφαλείας υπάρχει και λεκτικό φίλτρο "ρεθύμν".
+    # ======================================================================
+    # ΔΗΜΟΣ ΡΕΘΥΜΝΗΣ — κύριος φορέας + υπο-φορείς (ΝΠΔΔ/επιχειρήσεις)
+    # ======================================================================
+    {"key": "dimos_rethymnis", "label": "Δήμος Ρεθύμνης",
+     "group": "Δήμος Ρεθύμνης", "candidates": ["6263", "dhmos_rethymnou"]},
+    {"key": "reth_deya", "label": "ΔΕΥΑ Ρεθύμνης",
+     "group": "Δήμος Ρεθύμνης", "candidates": ["50453"]},
+    {"key": "reth_koinofelis", "label": "Κοινωφελής Επιχείρηση Δήμου Ρεθύμνης",
+     "group": "Δήμος Ρεθύμνης", "candidates": ["53290"]},
+    {"key": "reth_koinofelis_palaia", "label": "Κοινωφελής Επιχείρηση Δήμου Ρεθύμνου (παλαιά)",
+     "group": "Δήμος Ρεθύμνης", "candidates": ["52401"]},
+    {"key": "reth_kapi", "label": "ΚΑΠΗ Δήμου Ρεθύμνης",
+     "group": "Δήμος Ρεθύμνης", "candidates": ["50263"]},
+    {"key": "reth_paidikoi", "label": "Παιδικοί & Βρεφονηπιακοί Σταθμοί Δήμου Ρεθύμνης",
+     "group": "Δήμος Ρεθύμνης", "candidates": ["50264"]},
+    {"key": "reth_athlitikos", "label": "Δημοτικός Αθλητικός Οργανισμός Ρεθύμνης",
+     "group": "Δήμος Ρεθύμνης", "candidates": ["50265"]},
+    {"key": "reth_filarmoniki", "label": "Δημοτική Φιλαρμονική - Ωδείο Ρεθύμνης",
+     "group": "Δήμος Ρεθύμνης", "candidates": ["50266"]},
+    {"key": "reth_limeniko", "label": "Δημοτικό Λιμενικό Ταμείο Ρεθύμνου",
+     "group": "Δήμος Ρεθύμνης", "candidates": ["50273"]},
+    {"key": "reth_koin_mousiki", "label": "Κοινωνική Πολιτική & Μουσική Παιδεία Δήμου Ρεθύμνης",
+     "group": "Δήμος Ρεθύμνης", "candidates": ["52941"]},
+    {"key": "reth_sxolikes", "label": "Σχολικές Επιτροπές Δήμου Ρεθύμνης",
+     "group": "Δήμος Ρεθύμνης", "candidates": ["53543"]},
+    {"key": "reth_koinofelis_arkadiou", "label": "Δημοτική Κοινωφελής Επιχείρηση Αρκαδίου",
+     "group": "Δήμος Ρεθύμνης", "candidates": ["52550"]},
+    {"key": "reth_nosokomeio", "label": "Δημοτικό Νοσοκομείο Ρεθύμνου",
+     "group": "Δήμος Ρεθύμνης", "candidates": ["100068875"]},
+
+    # ======================================================================
+    # ΔΗΜΟΣ ΑΓΙΟΥ ΒΑΣΙΛΕΙΟΥ
+    # ======================================================================
+    {"key": "dimos_agiou_vasileiou", "label": "Δήμος Αγίου Βασιλείου",
+     "group": "Δήμος Αγίου Βασιλείου", "candidates": ["6006", "agiosbasileios"]},
+    {"key": "av_koinofelis", "label": "Δημοτική Κοινωφελής Επιχείρηση Αγίου Βασιλείου (ΔΗ.Κ.Ε.Α.Β.)",
+     "group": "Δήμος Αγίου Βασιλείου", "candidates": ["54055"]},
+    {"key": "av_paidikos_spiliou", "label": "Δημοτικός Παιδικός Σταθμός Σπηλίου",
+     "group": "Δήμος Αγίου Βασιλείου", "candidates": ["52716"]},
+    {"key": "av_sxoliki_a", "label": "Σχολική Επιτροπή Α/θμιας Εκπ/σης Δήμου Αγίου Βασιλείου",
+     "group": "Δήμος Αγίου Βασιλείου", "candidates": ["100022798"]},
+    {"key": "av_sxoliki_b", "label": "Σχολική Επιτροπή Β/θμιας Εκπ/σης Δήμου Αγίου Βασιλείου",
+     "group": "Δήμος Αγίου Βασιλείου", "candidates": ["100022811"]},
+
+    # ======================================================================
+    # ΔΗΜΟΣ ΑΜΑΡΙΟΥ
+    # ======================================================================
+    {"key": "dimos_amariou", "label": "Δήμος Αμαρίου",
+     "group": "Δήμος Αμαρίου", "candidates": ["6025", "dimos_amariou"]},
+    {"key": "amari_koinofelis", "label": "Δημοτική Κοινωφελής Επιχείρηση Δήμου Αμαρίου",
+     "group": "Δήμος Αμαρίου", "candidates": ["53499"]},
+
+    # ======================================================================
+    # ΔΗΜΟΣ ΑΝΩΓΕΙΩΝ
+    # ======================================================================
+    {"key": "dimos_anogeion", "label": "Δήμος Ανωγείων",
+     "group": "Δήμος Ανωγείων", "candidates": ["6039", "dimos_anogeia"]},
+    {"key": "anog_koinofelis", "label": "Δημοτική Κοινωφελής Επιχείρηση Δήμου Ανωγείων",
+     "group": "Δήμος Ανωγείων", "candidates": ["50279"]},
+    {"key": "anog_paidikos", "label": "Δημοτικός Παιδικός Σταθμός Ανωγείων",
+     "group": "Δήμος Ανωγείων", "candidates": ["50294"]},
+    {"key": "anog_stadio", "label": "Δημοτικό Στάδιο Ανωγείων",
+     "group": "Δήμος Ανωγείων", "candidates": ["50297"]},
+    {"key": "anog_sxolikes", "label": "Σχολικές Επιτροπές Δήμου Ανωγείων",
+     "group": "Δήμος Ανωγείων", "candidates": ["50925"]},
+    {"key": "anog_kapi", "label": "ΚΑΠΗ Δήμου Ανωγείων",
+     "group": "Δήμος Ανωγείων", "candidates": ["99220311"]},
+
+    # ======================================================================
+    # ΔΗΜΟΣ ΜΥΛΟΠΟΤΑΜΟΥ
+    # ======================================================================
+    {"key": "dimos_mylopotamou", "label": "Δήμος Μυλοποτάμου",
+     "group": "Δήμος Μυλοποτάμου", "candidates": ["6201", "dimosmylopotamou"]},
+    {"key": "myl_deyam", "label": "ΔΕΥΑ Μυλοποτάμου (Δ.Ε.Υ.Α.Μ.)",
+     "group": "Δήμος Μυλοποτάμου", "candidates": ["51050"]},
+    {"key": "myl_deyag", "label": "ΔΕΥΑ Δήμου Γεροποτάμου (Δ.Ε.Υ.Α.Γ.)",
+     "group": "Δήμος Μυλοποτάμου", "candidates": ["52004"]},
+    {"key": "myl_avlopotamos", "label": "Οργανισμός Πολιτισμού-Τουρισμού Δήμου Μυλοποτάμου «Ο Αυλοπόταμος»",
+     "group": "Δήμος Μυλοποτάμου", "candidates": ["51048"]},
+    {"key": "myl_dhkemy", "label": "Δημοτική Κοινωφελής Επιχείρηση Μυλοποτάμου (ΔΗ.Κ.Ε.ΜΥ.)",
+     "group": "Δήμος Μυλοποτάμου", "candidates": ["52632"]},
+    {"key": "myl_koinofelis_kouloukona", "label": "Δημοτική Κοινωφελής Επιχείρηση Δήμου Κουλούκωνα",
+     "group": "Δήμος Μυλοποτάμου", "candidates": ["51224"]},
+    {"key": "myl_koinofelis_geropotamou", "label": "Κοινωφελής Επιχείρηση Δήμου Γεροποτάμου",
+     "group": "Δήμος Μυλοποτάμου", "candidates": ["51226"]},
+    {"key": "myl_kapi_peramatos", "label": "ΚΑΠΗ Περάματος",
+     "group": "Δήμος Μυλοποτάμου", "candidates": ["51220"]},
+    {"key": "myl_vrefon_geropotamou", "label": "Βρεφονηπιακός Σταθμός Δήμου Γεροποτάμου",
+     "group": "Δήμος Μυλοποτάμου", "candidates": ["51221"]},
+    {"key": "myl_paidikos_zonianon", "label": "Κοινοτικός Παιδικός Σταθμός Ζωνιανών",
+     "group": "Δήμος Μυλοποτάμου", "candidates": ["51222"]},
+    {"key": "myl_paidikos_livadion", "label": "Δημοτικός Παιδικός Σταθμός Λιβαδίων",
+     "group": "Δήμος Μυλοποτάμου", "candidates": ["51223"]},
+    {"key": "myl_sxolikes", "label": "Σχολικές Επιτροπές Δήμου Μυλοποτάμου",
+     "group": "Δήμος Μυλοποτάμου", "candidates": ["53481"]},
+
+    # ======================================================================
+    # ΠΕΡΙΦΕΡΕΙΑ & ΑΠΟΚΕΝΤΡΩΜΕΝΗ (αναρτούν για ΟΛΗ την Κρήτη -> φίλτρο Ρεθύμνου)
+    # ======================================================================
     {
         "key": "pe_rethymnis",
         "label": "Π.Ε. Ρεθύμνης (Περιφέρεια Κρήτης)",
+        "group": "Περιφέρεια / Αποκεντρωμένη",
         "candidates": ["5010", "periferia_kritis"],
-        # 15 μονάδες Π.Ε. Ρεθύμνης (Διοικητικό, Αγροτική, Ανάπτυξη, Υγεία,
-        # Μεταφορές, Τεχνικά, Τουρισμός, Πολιτική Προστασία, Περιβάλλον κ.λπ.)
         "unit_ids": [
             "81119", "81120", "81121", "81122", "81123", "81124",
             "81819", "84062", "85314", "85315", "85660", "85877",
@@ -110,6 +178,7 @@ ORGANIZATIONS = [
     {
         "key": "apok_dioikisi_kritis",
         "label": "Αποκεντρωμένη Διοίκηση Κρήτης (Ρεθύμνου)",
+        "group": "Περιφέρεια / Αποκεντρωμένη",
         "candidates": ["50204", "apdik_krhths"],
         "unit_filter": ["ρεθύμν", "ρεθυμν", "rethymn"],
     },
@@ -127,6 +196,7 @@ def init_db(conn):
             ada              TEXT PRIMARY KEY,
             org_key          TEXT NOT NULL,
             org_label        TEXT,
+            org_group        TEXT,
             organization_uid TEXT,
             subject          TEXT,
             decision_type    TEXT,
@@ -161,6 +231,7 @@ def init_db(conn):
     existing = {r[1] for r in cur.execute("PRAGMA table_info(decisions)")}
     for col, ddl in [
         ("doc_category",        "ALTER TABLE decisions ADD COLUMN doc_category TEXT"),
+        ("org_group",           "ALTER TABLE decisions ADD COLUMN org_group TEXT"),
         ("count_in_total",      "ALTER TABLE decisions ADD COLUMN count_in_total INTEGER DEFAULT 0"),
         ("amount_confidence",   "ALTER TABLE decisions ADD COLUMN amount_confidence TEXT"),
         ("amount_method",       "ALTER TABLE decisions ADD COLUMN amount_method TEXT"),
@@ -239,9 +310,16 @@ def search_page(org_uid, page, size, from_date=None, sort="recent"):
         "sort": sort,
         "status": "PUBLISHED",
     }
+    # ΚΡΙΣΙΜΟ: αν ΔΕΝ δώσουμε ρητό εύρος ημερομηνιών, το API βάζει αυτόματα
+    # φίλτρο "τελευταίο εξάμηνο" και χάνουμε όλο το ιστορικό! Δίνουμε λοιπόν
+    # ρητό from_issue_date από το 2010 (έναρξη Διαύγειας) έως αύριο.
     if from_date:
-        # Ημερομηνία έκδοσης - Από (format YYYY-MM-DD)
         params["from_issue_date"] = from_date
+    else:
+        params["from_issue_date"] = "2010-10-01"
+    # to_issue_date = αύριο (για να πιάνει και τις σημερινές)
+    tomorrow = (datetime.now(timezone.utc) + timedelta(days=1)).strftime("%Y-%m-%d")
+    params["to_issue_date"] = tomorrow
     data = http_get_json(SEARCH_URL, params)
     if data is not None:
         data["_requested_uid"] = str(org_uid)
@@ -582,6 +660,7 @@ def parse_decision(decision, org):
         "ada": ada,
         "org_key": org["key"],
         "org_label": org["label"],
+        "org_group": org.get("group", org["label"]),
         "organization_uid": decision.get("organizationId")
                             or decision.get("organizationUid"),
         "subject": decision.get("subject") or "",
@@ -610,7 +689,7 @@ def upsert_decisions(conn, rows):
     if not rows:
         return 0
     cur = conn.cursor()
-    cols = ["ada", "org_key", "org_label", "organization_uid", "subject",
+    cols = ["ada", "org_key", "org_label", "org_group", "organization_uid", "subject",
             "decision_type", "decision_type_label", "issue_date",
             "submission_ts", "protocol", "signer", "unit", "amount",
             "amount_currency", "year", "doc_url", "doc_category",
